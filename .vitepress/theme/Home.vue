@@ -89,7 +89,7 @@ const chips = [
     <header class="nv-mast">
       <div class="nv-mast-line">
         <span class="nv-kicker">kyte // a language for hypermedia services</span>
-        <span class="nv-kicker nv-kicker-dim">beta 0.1.0</span>
+        <span class="nv-kicker nv-kicker-dim">v1.0.0</span>
       </div>
       <h1 class="nv-word">Kyte</h1>
       <p class="nv-lede">
@@ -118,15 +118,8 @@ const chips = [
       </div>
       <div class="nv-dl-panel">
         <div class="nv-dl-tabs" role="tablist" aria-label="Operating system">
-          <button
-            v-for="t in osTabs"
-            :key="t.id"
-            class="nv-dl-tab"
-            :class="{ 'is-active': activeOs === t.id }"
-            role="tab"
-            :aria-selected="activeOs === t.id"
-            @click="activeOs = t.id"
-          >
+          <button v-for="t in osTabs" :key="t.id" class="nv-dl-tab" :class="{ 'is-active': activeOs === t.id }"
+            role="tab" :aria-selected="activeOs === t.id" @click="activeOs = t.id">
             <span class="nv-dl-tab-label">{{ t.label }}</span>
             <span class="nv-dl-tab-note">{{ t.note }}</span>
           </button>
@@ -137,11 +130,13 @@ const chips = [
         </div>
         <p class="nv-dl-sub">
           Installs to <code>{{ installDir }}</code>, then add <code>{{ binDir }}</code> to your PATH.
-          <a class="nv-link nv-link-azure" href="https://github.com/kytelang/kyte/releases/latest">Manual downloads and checksums →</a>
+          <a class="nv-link nv-link-azure" href="https://github.com/kytelang/kyte/releases/latest">Manual downloads and
+            checksums →</a>
         </p>
         <p class="nv-dl-sub">
           Deploying a service? Kynator, the orchestrator, installs onto a Linux host from its own release.
-          <a class="nv-link nv-link-azure" :href="withBase('/guide/23-deploying-with-the-orchestrator')">Deploy with Kynator →</a>
+          <a class="nv-link nv-link-azure" :href="withBase('/guide/23-deploying-with-the-orchestrator')">Deploy with
+            Kynator →</a>
         </p>
       </div>
     </section>

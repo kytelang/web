@@ -13,7 +13,7 @@ export default defineConfig({
   // GitHub Pages PROJECT page: served at https://kytelang.github.io/kyte-web/, so the base is the repo
   // name. The home component uses withBase(), so internal links follow automatically. To move to a custom
   // domain at root (e.g. kytelang.org), set this back to '/' and add public/CNAME.
-  base: '/kyte-web/',
+  base: '/',
   description:
     'Kyte is a statically-typed language built for hypermedia web applications, with a single-threaded async runtime, self-hosted TLS, four database drivers, and a native orchestrator. One language, one toolchain, one binary.',
   cleanUrls: true,

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
+    "deploy": "firebase deploy",
     "preview": "vitepress preview"
   },
   "devDependencies": {
