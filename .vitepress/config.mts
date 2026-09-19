@@ -75,6 +75,16 @@ export default defineConfig({
           ],
         },
         {
+          text: 'kaidb database',
+          collapsed: false,
+          items: [
+            { text: '26. kaidb overview', link: '/guide/26-kaidb-overview' },
+            { text: '27. kaidb SQL reference', link: '/guide/27-kaidb-sql' },
+            { text: '28. The kaidb CLI', link: '/guide/28-kaidb-cli' },
+            { text: '29. Connecting from Kyte', link: '/guide/29-kaidb-driver' },
+          ],
+        },
+        {
           text: 'Platform',
           collapsed: false,
           items: [
