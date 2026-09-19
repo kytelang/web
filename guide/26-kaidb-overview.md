@@ -1,63 +1,90 @@
 # 26. kaidb overview
 
-kaidb is a small, self contained database engine written in Zig. It speaks SQL,
-stores your data durably on a single machine, and ships as two binaries: `kaidb`
-(the server) and `kaidb-cli` (a command line client). A Kyte application talks to
-it through the same `Connection` and `Driver` vocabulary you already use for the
-other databases in [Chapter 20](20-database-drivers.md), using the `kyte-kaidb`
-driver package covered in [Chapter 29](29-kaidb-driver.md).
+kaidb is a durable SQL database engine written in Zig. It gives you real MVCC
+transactions, crash recovery, secondary and covering indexes, streaming read
+replicas, and a familiar SQL surface, all from a single small server binary with no
+external dependencies. It ships as two programs: `kaidb` (the server) and
+`kaidb-cli` (a command line client). A Kyte application talks to it through the same
+`Connection` and `Driver` vocabulary you already use for the other databases in
+[Chapter 20](20-database-drivers.md), using the `kyte-kaidb` driver package covered
+in [Chapter 29](29-kaidb-driver.md).
 
-This chapter explains what kaidb is, where it fits, and how to run the server. The
-next three chapters cover the SQL it supports, the CLI, and connecting from Kyte.
+This chapter explains kaidb's design and how to run the server. The next three
+chapters cover the SQL it supports, the CLI, and connecting from Kyte.
 
-> **A note on names.** The product is kaidb. The storage engine underneath is still
-> called btree, and a few older spellings survive in the code and on the wire: the
-> server prints the NovaDB name, the connection scheme is `novadb://`, the data file
-> is `nova.db`, the environment variables are prefixed `NOVADB_`, and the admin
-> subcommands are spelled `novadb backup`, `novadb restore`, and so on. These are all
-> the same system. Read `novadb` as a legacy spelling of kaidb wherever you see it.
+## The storage model
 
-## What kaidb is
+kaidb is **index-organised (clustered)**: a table *is* its primary key B+Tree, and
+the full row lives in the leaf next to its key. This is the same design InnoDB uses,
+and it has a direct payoff. A lookup or range scan by primary key finds the key and
+the row in the same descent, so it does strictly less I/O than a heap based engine
+like PostgreSQL, which has to read the index and then make a second random read into
+the heap.
 
-kaidb is an **index organised** engine. A table is physically its own primary key
-B+Tree, and the full row lives in the leaf next to its key. There is no separate
-heap. A lookup or a range scan by primary key therefore does strictly less I/O than
-a heap based engine would, because finding the key and reading the row are the same
-descent.
+Pages are 16 KiB (four times SQLite's default, twice PostgreSQL's), which shortens
+the tree and amortises per-page overhead over more rows.
 
-On top of that clustered store, kaidb adds the machinery you expect from a real
-database:
+## What kaidb gives you
 
-- **MVCC** (multi version concurrency control), so readers see a consistent snapshot
-  and do not block writers. Row versions are kept inline, with an undo log for older
-  versions.
-- **A write ahead log** with doublewrite and a committed set sidecar, so a crash in
-  the middle of a write recovers cleanly to the last committed state.
-- **Secondary indexes**, single column or composite, with order preserving keys so
-  that range scans and `ORDER BY` can walk the index in order.
-- **A cost based planner** that picks index scans, index only aggregates, and, for
-  joins, nested loop versus hash join by estimated cost.
+- **MVCC transactions.** Each row's latest version is stored inline with a 32-byte
+  version header, and older versions live in an undo log. Readers see a consistent
+  snapshot and never block writers, and a background writer purges undo versions once
+  no transaction needs them.
+- **Durability that survives a crash.** Every page mutation is written ahead to the
+  WAL, and dirty pages go through a doublewrite buffer, the same torn-write protection
+  InnoDB uses, so a `kill -9` in the middle of a write recovers cleanly. Recovery
+  repairs torn pages from the doublewrite copy, then replays the WAL in three phases.
+  `synchronous_commit` lets you trade per-commit `fsync` latency for durability.
+- **Backup and point in time recovery.** Take a consistent physical snapshot as a
+  cold backup (`kaidb backup`) or a hot one (`BACKUP DATABASE TO`), and replay
+  archived WAL segments forward to any target LSN with `kaidb restore`.
+- **A cost based query planner.** It picks index scans, index-only aggregates, and,
+  for joins, nested loop versus hash join by estimated cost. Covering indexes are
+  answered index-only, with no base-row descent. See [Chapter 27](27-kaidb-sql.md).
+- **A concurrent buffer pool.** The pool is sharded into independent instances, each
+  with its own lock and CLOCK eviction, so cache hits on different shards proceed in
+  parallel. It auto-sizes to roughly half of system RAM, and an optional mmap read
+  path borrows a pointer straight into the mapped file with no copy.
+- **Fast clustered lookups.** For secondary-index scans, kaidb prefetches the base
+  rows ahead of the scan and reuses a base-leaf cursor across a batch, so a range of
+  nearby rows is resolved with a single leaf walk. This is more than SQLite does,
+  which relies on OS readahead alone.
+- **Streaming read replicas.** See the next section.
 
-There is also a document mode (a MongoDB style collection API over BSON) which we
-touch on at the end of this chapter.
+## High availability and read replicas
 
-## Where kaidb fits
+kaidb supports primary and follower replication. A primary streams its committed
+writes to one or more followers, which you can use as **read replicas** to scale
+reads out across machines, and as **standbys** for high availability so a follower
+can take over if the primary is lost.
 
-kaidb is at its best as a **single node store for bounded, mostly steady workloads**:
-configuration, control plane state, workload specifications, leases, membership,
-manifests, and application data that comfortably fits one machine. It was built as
-the control plane store for the Kyte orchestrator, and that is the role it is
-verified in. It gives you durability, MVCC, and a familiar SQL surface without a
-separate database server to operate.
+Replication is configured through the server config or environment. On the primary,
+enable a replica peer; on the follower, point it at the primary. The default replica
+peer port is `3010`.
 
-Be honest with yourself about the ceiling. kaidb is a single node engine. It is not
-(yet) a general purpose, large scale OLTP or document store: a very wide secondary
-index read pays a per row descent back into the clustered base tree, and scans past
-the size of the buffer pool fall back to synchronous reads. The practical remedy for
-the read heavy cases, a covering composite index, is described in
-[Chapter 27](27-kaidb-sql.md). For a workload that fits one machine and values simple
-operations and durable storage, kaidb is a good fit. For sharded, multi node,
-high churn OLTP at very large scale, reach for a dedicated database.
+```json
+{
+  "replication": { "enabled": true, "address": "10.0.0.2", "port": 3010 }
+}
+```
+
+Shipping to a follower is asynchronous: the primary commits locally and streams the
+change to the follower, and if a follower is briefly unreachable the primary keeps
+committing and the follower catches up when it reconnects. A follower can be promoted
+to take over as the leader.
+
+## Two modes: relational and document
+
+kaidb runs in one of two modes, chosen by the `mode` config field:
+
+- **`relational`** (the default) serves SQL over the wire protocol. This is the mode
+  the Kyte driver and `kaidb-cli` use.
+- **`document`** serves a MongoDB style collection API over BSON: create collections,
+  insert one or many documents, find by filter, count, update and delete by filter,
+  create secondary indexes on a field path such as `price` or `address.city`, paginate
+  with cursors, and run atomic multi document transactions.
+
+A server is one mode or the other for its lifetime.
 
 ## Running the server
 
@@ -69,21 +96,20 @@ kaidb
 ```
 
 Configuration lives in a `db.json` file in the working directory. Every field has a
-shipped default, so you only set what you want to change. The defaults are:
+default, so you only set what you want to change:
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `address` | `127.0.0.1` | Interface the listeners bind to. |
 | wire `port` | `3009` | The binary protocol port (SQL clients and the Kyte driver). |
 | HTTP `port` | `3008` | Health and metrics endpoints. |
-| `base_dir` | `data` | Directory holding `nova.db` and the `wal/` folder. |
-| `mode` | `relational` | `relational` (SQL) or `document` (NoSQL). |
+| `base_dir` | `data` | Directory holding `kaidb.db` and the `wal/` folder. |
+| `mode` | `relational` | `relational` (SQL) or `document`. |
 | TLS `enabled` | `false` | Whether the wire port requires TLS. |
 | `durability.synchronous_commit` | `false` | Whether a commit waits for the WAL flush. |
-| `pool_size` | `0` | Buffer pool pages; `0` means auto size to about half of RAM. |
+| `pool_size` | `0` | Buffer pool pages; `0` auto-sizes to about half of RAM. |
 
-A minimal `db.json` that moves the data directory and turns on synchronous commit
-looks like this:
+A minimal `db.json` that moves the data directory and turns on synchronous commit:
 
 ```json
 {
@@ -92,61 +118,32 @@ looks like this:
 }
 ```
 
-### Server modes
-
-kaidb runs in one of two modes, chosen by the `mode` field:
-
-- **`relational`** (the default) serves SQL over the wire protocol and rejects
-  document operations. This is the mode the Kyte driver and `kaidb-cli` use.
-- **`document`** serves the MongoDB style collection API and rejects SQL frames.
-
-A server is one mode or the other for its lifetime, so pick the mode that matches how
-your application talks to it.
-
 ### Health and metrics
 
-Alongside the wire port, kaidb serves a small HTTP surface on the HTTP port for
-operations:
+Alongside the wire port, kaidb serves an HTTP surface on the HTTP port:
 
 - `GET /healthz` : liveness.
 - `GET /readyz` : readiness.
-- `GET /metrics` : Prometheus metrics, for example `kaidb_mmap_borrow_serves_total`.
+- `GET /metrics` : Prometheus metrics.
 
 ### Admin subcommands
 
-The `kaidb` binary also runs offline maintenance tasks. These operate directly on the
-data directory, so run them when the server for that directory is stopped (or against
-a copy):
+The `kaidb` binary runs offline maintenance tasks directly on the data directory, so
+run them when the server for that directory is stopped (or against a copy):
 
 ```sh
 # Compact a data file.
-novadb compact <src> <dst>
+kaidb compact <src> <dst>
 
-# Take a hot backup. base_dir must directly contain nova.db and wal/.
-novadb backup <base_dir> <dest_dir>
+# Take a hot backup. base_dir must directly contain kaidb.db and wal/.
+kaidb backup <base_dir> <dest_dir>
 
 # Restore, with optional point in time recovery.
-novadb restore <snapshot_dir> <dest_base_dir> [--archive=<dir>] [--target-lsn=<N>]
+kaidb restore <snapshot_dir> <dest_base_dir> [--archive=<dir>] [--target-lsn=<N>]
 
 # Rotate a user's password offline.
-novadb passwd <base_dir> <user> <newpassword>
+kaidb passwd <base_dir> <user> <newpassword>
 ```
-
-> These subcommands keep the legacy `novadb` spelling. They are part of the same
-> `kaidb` binary.
-
-## The document mode in brief
-
-When started in `document` mode, kaidb exposes MongoDB style collections. Documents
-are BSON, and the operations include creating a collection, inserting one or many
-documents, finding by filter (an empty filter `{}` matches everything), finding one,
-counting, updating and deleting by filter, creating a secondary index on a field path
-such as `price` or `address.city`, cursor based pagination, and atomic multi document
-transactions with begin, commit, and rollback.
-
-Document mode is a distinct server mode and is not reached through the SQL driver.
-The rest of this section of the guide focuses on the relational surface, which is what
-a typical Kyte web application uses.
 
 ## Where to go next
 

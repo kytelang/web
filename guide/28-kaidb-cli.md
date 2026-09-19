@@ -49,7 +49,7 @@ kaidb-cli 127.0.0.1:3009 -d shop < schema.sql
 ### Interactive
 
 Run it against a TTY with no `-c` and no piped input, and you get an interactive
-prompt. Type statements at the `nova> ` prompt, and leave with `exit`, `quit`, or
+prompt. Type statements at the `kaidb> ` prompt, and leave with `exit`, `quit`, or
 Ctrl and D.
 
 ```sh
@@ -58,14 +58,14 @@ kaidb-cli 127.0.0.1:3009 -u admin -p admin -d shop
 
 ```
 kaidb CLI (binary protocol)
-nova> SELECT id, customer FROM ord WHERE status = 'paid';
+kaidb> SELECT id, customer FROM ord WHERE status = 'paid';
 +----+----------+
 | id | customer |
 +----+----------+
 |  2 | Ravi     |
 +----+----------+
 1 row(s) in set
-nova> exit
+kaidb> exit
 ```
 
 ## Reading the output
@@ -74,7 +74,3 @@ nova> exit
   `1 row(s) in set`.
 - A statement that changes data (`INSERT`, `UPDATE`, `DELETE`) prints
   `Query OK, N row(s) affected`.
-
-> The prompt still shows `nova>` and the banner mentions NovaDB. As covered in
-> [Chapter 26](26-kaidb-overview.md), that is a legacy spelling of kaidb; it is the
-> same system.

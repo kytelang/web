@@ -28,16 +28,12 @@ Then import it. The module name is `kaidb`:
 import kaidb;
 ```
 
-> The connection scheme is still `novadb://`, a legacy spelling of kaidb, as noted in
-> [Chapter 26](26-kaidb-overview.md). The package and import name are `kyte-kaidb` and
-> `kaidb`.
-
 ## Connecting
 
-The connection string uses the `novadb://` scheme:
+The connection string uses the `kaidb://` scheme:
 
 ```
-novadb://user[:password]@host[:port]?db=<name>&tls=<mode>&tlsCAFile=<pem>
+kaidb://user[:password]@host[:port]?db=<name>&tls=<mode>&tlsCAFile=<pem>
 ```
 
 The parts and their defaults are:
@@ -60,7 +56,7 @@ import kaidb;
 import data.db;
 
 async fn main() {
-    let conn = await kaidb.connectKaidb("novadb://admin@127.0.0.1:3009?db=shop");
+    let conn = await kaidb.connectKaidb("kaidb://admin@127.0.0.1:3009?db=shop");
 
     let params = List<DbValue>();
     params.push(db.dbInt(2));
@@ -106,7 +102,7 @@ pool, exactly as shown for the other drivers in
 import kaidb;
 import pool;
 
-let p = pool.Pool(KyteDriver(), "novadb://admin@127.0.0.1:3009?db=shop", 8);
+let p = pool.Pool(KyteDriver(), "kaidb://admin@127.0.0.1:3009?db=shop", 8);
 
 let conn = await p.acquire();   // borrow a live connection
 // ... use conn ...
