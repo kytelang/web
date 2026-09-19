@@ -65,6 +65,7 @@ functions run with `kyte test <file>.ky`.
 | 27  | [kaidb SQL reference](27-kaidb-sql.md)                                    | DDL, DML, SELECT clauses, joins, aggregates, operators, types, covering indexes, known simplifications                       |
 | 28  | [The kaidb CLI](28-kaidb-cli.md)                                          | `kaidb-cli`: flags, one-shot/piped/interactive modes, reading the output                                                     |
 | 29  | [Connecting from Kyte](29-kaidb-driver.md)                               | the `kyte-kaidb` driver, connection string, connect, query/exec, pooling, prepared statements, ORM binding                  |
+| 30  | [Kyte Data Studio](30-kyte-studio.md)                                    | database GUI: 5 engines, live-probed connections, schema explorer, Monaco SQL + Mongo find, capped result grid, create table/index |
 
 > **Version:** tracks `kyte version` (Beta 0.1.0). Syntax may still change per
 > [`../STABILITY.md`](../STABILITY.md).

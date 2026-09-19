@@ -75,6 +75,16 @@ export default defineConfig({
           ],
         },
         {
+          text: 'Platform',
+          collapsed: false,
+          items: [
+            { text: '22. Building and distributing', link: '/guide/22-building-and-distribution' },
+            { text: '23. Deploying with Kynator', link: '/guide/23-deploying-with-the-orchestrator' },
+            { text: '24. Artifact delivery', link: '/guide/24-blob-store' },
+            { text: '25. Continuous deployment', link: '/guide/25-continuous-deployment' },
+          ],
+        },
+        {
           text: 'kaidb database',
           collapsed: false,
           items: [
@@ -85,13 +95,10 @@ export default defineConfig({
           ],
         },
         {
-          text: 'Platform',
+          text: 'Tools',
           collapsed: false,
           items: [
-            { text: '22. Building and distributing', link: '/guide/22-building-and-distribution' },
-            { text: '23. Deploying with Kynator', link: '/guide/23-deploying-with-the-orchestrator' },
-            { text: '24. Artifact delivery', link: '/guide/24-blob-store' },
-            { text: '25. Continuous deployment', link: '/guide/25-continuous-deployment' },
+            { text: '30. Kyte Data Studio', link: '/guide/30-kyte-studio' },
           ],
         },
       ],

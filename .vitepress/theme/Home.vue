@@ -50,7 +50,7 @@ const layers = [
   { n: '03', name: 'Crypto and TLS', detail: 'TLS 1.3 and all crypto, self-hosted, hardware AES and SHA.', repl: 'no OpenSSL', tone: 'green' },
   { n: '04', name: 'Web framework', detail: 'Vertical slices, typed handlers, hypermedia by default.', repl: 'no framework sprawl', tone: 'green' },
   { n: '05', name: 'Data access', detail: 'One Connection interface, four drivers, compile-checked row binding and a generic repository.', repl: 'no ORM lock-in', tone: 'orange' },
-  { n: '06', name: 'Kynator', detail: 'Replicas, load balancing, and an HA config store, deployed from a release.', repl: 'instead of k8s', tone: 'ink' },
+  { n: '06', name: 'Kynator', detail: 'Replicas, load balancing, and an HA config store, deployed from a release.', repl: 'binary Orchestrator', tone: 'ink' },
 ]
 
 const pillars = [
