@@ -112,6 +112,41 @@ bounded the index). Reading a field of an *absent* optional is caught: as a comp
 checker can see it, and otherwise as a located runtime abort, so an optional never becomes a silent
 null-dereference.
 
+## Narrowing across `&&` and `||`
+
+A guard narrows for the rest of the same boolean expression, not just inside an `if` body. Because `&&`
+and `||` short-circuit (Chapter 2), a guard on the left protects the right operand:
+
+```kyte
+fn f(x: string | undefined): int {
+    if (x != undefined && x.length > 0) { return x.length; }  // x is present in `x.length`
+    return -1;
+}
+
+fn g(x: string | undefined): bool {
+    return x == undefined || x.length == 0;   // x is present in `x.length` (the == guard was false)
+}
+```
+
+The same applies to the branches of an `if`. The then-branch is narrowed by every `!= undefined`
+conjunct, and the else-branch by every `== undefined` disjunct:
+
+```kyte
+fn both(a: string | undefined, b: string | undefined): int {
+    if (a != undefined && b != undefined) {
+        return a.length + b.length;    // both a and b are present here
+    }
+    return -1;
+}
+
+fn viaElse(x: string | undefined): int {
+    if (x == undefined) { return -1; } else { return x.length; }  // x is present in the else
+}
+```
+
+An early-exit guard narrows the rest of the function too: after `if (x == undefined) { return 0; }`,
+`x` is a plain `T` for everything that follows.
+
 ## Optional fields in structs and classes
 
 A field is made optional by giving it an optional type, either `T?` or `T | undefined`. This is how you
