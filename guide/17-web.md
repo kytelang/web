@@ -369,6 +369,8 @@ The framework in `web.*` covers the rest of a real application:
 
 - **Server-sent events** for live updates: `app.sse(path, handler)` and an
   `EventBus` push HTML fragments to connected browsers (see `web.sse`).
+- **WebSockets** for a bidirectional channel: `app.ws(path, handler)` upgrades a
+  connection so the client can talk back in real time (see the section below).
 - **Sessions and cookies**: `web.session` and `web.cookie` for signed,
   server-side sessions and cookie handling.
 - **Middleware**: `app.use(mw)` runs cross-cutting logic (a `RouteMiddleware`)
@@ -378,6 +380,76 @@ The framework in `web.*` covers the rest of a real application:
 - **The client side**: `web.client` is an HTTP client for calling other
   services, and TLS is built in (chapter 15 and the runtime crypto are pure
   Kyte, no OpenSSL).
+
+## Real-time: server-sent events and WebSockets
+
+Two edges push work past the finite request and response cycle, and they are for
+different jobs.
+
+**Server-sent events (SSE)** are the default for hypermedia. The server holds one
+long-lived response open and streams HTML fragments (or Datastar patches) to the
+browser as things change. It is one-directional, server to client, which is exactly
+what a live UI needs most of the time. Register one with `app.sse(path, handler)`
+and push through an `EventBus`. Datastar (chapter 21) builds on this.
+
+**WebSockets** are for the cases SSE cannot cover: a genuinely bidirectional,
+low-latency channel where the client also talks back in real time, collaborative
+editing, a terminal, presence and typing indicators, multiplayer. Reach for a
+WebSocket only when you actually need the client to send as well as receive; if you
+just need live updates on the page, SSE is simpler and is the right default.
+
+A WebSocket route is a handler that owns a receive loop for the life of the
+connection. Register it with `app.ws(path, handler)`:
+
+```kyte
+import web.app;
+import web.websocket;
+import web.request;
+
+// Echoes every message back to the sender.
+class Echo impl WsHandler {
+    pub async fn serve(self: Echo, ws: websocket.WebSocket, req: request.Request): void {
+        // `req` is the upgrade request, so read cookies / session here for auth
+        // BEFORE the loop, exactly like a normal route.
+        while (ws.isOpen()) {
+            let m = await ws.recv();          // blocks for the next message
+            if (m == undefined) { break; }    // the peer closed
+            if (m.isText) {
+                let _ = await ws.sendText(m.text);
+            } else {
+                let _ = await ws.sendBinary(m.data, m.len);
+            }
+        }
+    }
+}
+
+fn main(): int {
+    let server = app.App();
+    server.ws("/echo", Echo());
+    server.run(8080);
+    return 0;
+}
+```
+
+`recv` returns a `Message` (`isText` selects `text` for a text frame, or the raw
+bytes at `data` for `len` bytes on a binary frame) or `undefined` once the peer
+closes. Ping and pong frames and the close handshake are handled for you and never
+surface as messages. Send with `ws.sendText(s)` / `ws.sendBinary(buf, len)`, and end
+the connection with `ws.close(code, reason)`.
+
+On the browser side this is the standard `WebSocket` API:
+
+```javascript
+const ws = new WebSocket("ws://localhost:8080/echo");
+ws.onopen = () => ws.send("hello");
+ws.onmessage = (e) => console.log("echo:", e.data);
+```
+
+A note on deployment, the same one that applies to SSE: a WebSocket is long-lived
+and holds one reactor slot for its lifetime, and a web app is a single reactor, so
+you scale by running instances behind the orchestrator's proxy (chapter 23). The
+proxy passes the `Upgrade` through and keeps each connection pinned to the instance
+that accepted it.
 
 ## Where to go next
 
