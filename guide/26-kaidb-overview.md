@@ -73,19 +73,6 @@ change to the follower, and if a follower is briefly unreachable the primary kee
 committing and the follower catches up when it reconnects. A follower can be promoted
 to take over as the leader.
 
-## Two modes: relational and document
-
-kaidb runs in one of two modes, chosen by the `mode` config field:
-
-- **`relational`** (the default) serves SQL over the wire protocol. This is the mode
-  the Kyte driver and `kaidb-cli` use.
-- **`document`** serves a MongoDB style collection API over BSON: create collections,
-  insert one or many documents, find by filter, count, update and delete by filter,
-  create secondary indexes on a field path such as `price` or `address.city`, paginate
-  with cursors, and run atomic multi document transactions.
-
-A server is one mode or the other for its lifetime.
-
 ## Running the server
 
 The server binary is `kaidb`. With no configuration file present it boots on all
@@ -104,7 +91,6 @@ default, so you only set what you want to change:
 | wire `port` | `3009` | The binary protocol port (SQL clients and the Kyte driver). |
 | HTTP `port` | `3008` | Health and metrics endpoints. |
 | `base_dir` | `data` | Directory holding `kaidb.db` and the `wal/` folder. |
-| `mode` | `relational` | `relational` (SQL) or `document`. |
 | TLS `enabled` | `false` | Whether the wire port requires TLS. |
 | `durability.synchronous_commit` | `false` | Whether a commit waits for the WAL flush. |
 | `pool_size` | `0` | Buffer pool pages; `0` auto-sizes to about half of RAM. |

@@ -61,7 +61,7 @@ functions run with `kyte test <file>.ky`.
 | 23  | [Deploying with the orchestrator](23-deploying-with-the-orchestrator.md) | `service`/`orchd`/`orchctl`, load-balanced replicas, the config store on artifactd                                          |
 | 24  | [Artifact delivery: the blob store](24-blob-store.md)                    | content-addressed `artifactd`, sha PUT/GET, Bearer auth, deploy by digest                                                   |
 | 25  | [Continuous deployment](25-continuous-deployment.md)                     | GitHub Actions + `kynator-deploy-action`: build and deploy on merge/tag, the deploy token, rollback                          |
-| 26  | [kaidb overview](26-kaidb-overview.md)                                   | what kaidb is, the clustered/MVCC/WAL model, where it fits, running the server, modes, admin subcommands, document mode      |
+| 26  | [kaidb overview](26-kaidb-overview.md)                                   | what kaidb is, the clustered/MVCC/WAL model, read replicas, where it fits, running the server, admin subcommands            |
 | 27  | [kaidb SQL reference](27-kaidb-sql.md)                                    | DDL, DML, SELECT clauses, joins, aggregates, operators, types, covering indexes, known simplifications                       |
 | 28  | [The kaidb CLI](28-kaidb-cli.md)                                          | `kaidb-cli`: flags, one-shot/piped/interactive modes, reading the output                                                     |
 | 29  | [Connecting from Kyte](29-kaidb-driver.md)                               | the `kyte-kaidb` driver, connection string, connect, query/exec, pooling, prepared statements, ORM binding                  |
