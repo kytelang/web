@@ -445,6 +445,64 @@ ws.onopen = () => ws.send("hello");
 ws.onmessage = (e) => console.log("echo:", e.data);
 ```
 
+**Restrict the origin.** A browser sends an `Origin` header on the upgrade, and
+because cookie-based CSRF tokens do not apply to WebSockets, checking it is the
+equivalent guard. By default any origin is accepted (handy in development); call
+`wsAllowOrigin` once per allowed origin to lock it down. A disallowed browser origin
+is refused with `403` before the upgrade; a request with no `Origin` (a non-browser
+client) is allowed, since there is nothing to forge.
+
+```kyte
+server.ws("/echo", Echo());
+server.wsAllowOrigin("https://app.example.com");
+```
+
+**Broadcasting to many clients.** One handler instance serves every connection, so
+it can hold shared state, a "hub" of the connected sockets, and fan a message out to
+all of them. Each `serve` adds its socket to the hub; a message from one is written
+to every live socket (closed ones are dropped):
+
+```kyte
+class Hub {
+    pub conns: list.List<websocket.WebSocket>,
+    init() { self.conns = list.List<websocket.WebSocket>(); }
+    fn add(self: Hub, ws: websocket.WebSocket): void { self.conns.push(ws); }
+    async fn broadcast(self: Hub, text: string): void {
+        let alive = list.List<websocket.WebSocket>();
+        let i = 0;
+        while (i < self.conns.size()) {
+            let c = self.conns.get(i);
+            if (c != undefined && c.isOpen()) {
+                let _ = await c.sendText(text);
+                alive.push(c);
+            }
+            i = i + 1;
+        }
+        self.conns = alive;    // compact: drop connections that have closed
+    }
+}
+
+class Chat impl WsHandler {
+    pub hub: Hub,
+    init(h: Hub) { self.hub = h; }
+    pub async fn serve(self: Chat, ws: websocket.WebSocket, req: request.Request): void {
+        self.hub.add(ws);
+        while (ws.isOpen()) {
+            let m = await ws.recv();
+            if (m == undefined) { break; }
+            if (m.isText) { await self.hub.broadcast(m.text); }
+        }
+    }
+}
+
+// server.ws("/chat", Chat(Hub()));
+```
+
+Because the app is a single reactor, the hub needs no locking: handlers cooperate,
+never preempt. To scale past one instance you would move the fan-out to a shared bus
+(each instance subscribes and rebroadcasts to its own connections), the same shape as
+the SSE `EventBus`.
+
 A note on deployment, the same one that applies to SSE: a WebSocket is long-lived
 and holds one reactor slot for its lifetime, and a web app is a single reactor, so
 you scale by running instances behind the orchestrator's proxy (chapter 23). The
