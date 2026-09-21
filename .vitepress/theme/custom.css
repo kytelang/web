@@ -360,6 +360,7 @@
 .nv-pre .f { color: var(--nv-orange); }
 .nv-pre .s { color: var(--nv-string); }
 .nv-pre .c { color: var(--nv-slate); font-style: italic; }
+.nv-code-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
 /* ---- Chips ---- */
 .nv-chips-wrap { padding: 48px 0; border-bottom: 1px solid var(--nv-line); }

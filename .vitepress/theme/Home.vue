@@ -181,12 +181,13 @@ const chips = [
         <p class="nv-code-note">
           A web feature in Kyte is a small folder: an input type, a handler, a view. The handler reads
           typed input with <code>ctx.bind</code> and runs its query through a repository over the
-          <code>Connection</code> interface. No mediator, no dependency-injection container. This is the whole
-          thing.
+          <code>Connection</code> interface, then returns a <code>.kyx</code> view. No mediator, no
+          dependency-injection container. This is the whole thing.
         </p>
         <a class="nv-link nv-link-azure" :href="withBase('/guide/17-web')">See the full walkthrough →</a>
       </div>
-      <pre class="nv-pre"><code><span class="c">// GET /api/products/{id:int}</span>
+      <div class="nv-code-stack">
+        <pre class="nv-pre"><code><span class="c">// GET /api/products/{id:int}</span>
 <span class="k">pub struct</span> <span class="t">GetProductByIdHandler</span> <span class="k">impl</span> <span class="t">RouteHandler</span> {
     repo: <span class="t">ProductRepository</span>,
 
@@ -199,6 +200,14 @@ const chips = [
         <span class="k">return</span> response.<span class="f">Response</span>(<span class="t">Status</span>.Ok, <span class="f">productCard</span>(found));
     }
 }</code></pre>
+        <pre class="nv-pre"><code><span class="c">// views/product_card.kyx — the .kyx view productCard() renders</span>
+<span class="k">pub fn</span> <span class="f">productCard</span>(p: <span class="t">Product</span>): <span class="t">Html</span> {
+    <span class="k">return</span> &lt;div class=<span class="s">"rounded-lg border border-slate-200 p-4 shadow-sm"</span>&gt;
+        &lt;h3 class=<span class="s">"font-semibold text-slate-800"</span>&gt;{p.name}&lt;/h3&gt;
+        &lt;p class=<span class="s">"mt-1 text-sm text-slate-500"</span>&gt;{p.price}&lt;/p&gt;
+    &lt;/div&gt;;
+}</code></pre>
+      </div>
     </section>
 
     <!-- Capability chips. -->
