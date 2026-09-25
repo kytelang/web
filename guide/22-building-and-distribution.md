@@ -87,6 +87,46 @@ first time it sees it and caches it, then links a real ELF or PE executable. Thi
 convenience for shipping a service built on your development machine; the native target is always the
 most exercised.
 
+## WebAssembly (experimental, synchronous subset only)
+
+Kyte can also compile to WebAssembly. This is a best-effort, experimental target meant for pure,
+sandboxed computation, not for running a Kyte service. Ask for it with `--target wasm`:
+
+```sh
+kyte compute.ky --target wasm
+```
+
+If `wasm-ld` (it ships with LLVM) is on your PATH, the compiler links the module for you in one step and
+writes it straight to your `-o` path, so `kyte compute.ky --target wasm -o compute.wasm` gives you a
+ready `compute.wasm`. If `wasm-ld` is not found, the compiler keeps the freestanding `wasm32` object and
+prints the exact link line to run yourself (already aimed at your `-o` path):
+
+```sh
+wasm-ld --no-entry --export-all build/debug/obj/compute.wasm.o -o compute.wasm
+```
+
+The module needs no host imports for the supported subset. It carries its own small string runtime, so
+integers, `long`, `bool`, value structs, control flow, function calls, generics, ARC, string literals,
+string concatenation, and number interpolation all lower and run inside a plain wasm host. Export the
+functions you want to call by marking them `export fn`.
+
+One ABI note: both `int` and `long` are passed and returned as 64-bit values at the wasm boundary, so a
+JavaScript host calls an exported function with `BigInt` arguments (`fib(10n)`, not `fib(10)`). This is
+only the calling convention; `int` still behaves as a 32-bit value with wraparound inside the module, so
+arithmetic gives the same result it would on a native build.
+
+### `async`/`await` does not compile to WebAssembly
+
+This is the boundary to keep in mind. The asynchronous machinery, `async fn`, `await`, the reactor, and
+coroutines, is native-only and does not lower to wasm. An `await` that reaches code generation is
+rejected at build time rather than producing a broken module. In practice this means the whole
+networking and I/O surface (HTTP, sockets, TLS, the web framework, the database drivers) is not available
+on the wasm target, because it is all built on the async reactor.
+
+So treat the wasm target as a way to ship a synchronous, self-contained computation (parsing, encoding, a
+pure algorithm, a small library of value transforms) into a wasm host. For anything that awaits, build a
+native binary and run it under Kynator as described in Chapter 23.
+
 ## Where to go next
 
 - Chapter 17 for the web framework the `--framework` scaffold sets up.
